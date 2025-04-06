@@ -107,12 +107,12 @@ int Selector::getNumberOfApplicants() const
 {
     if(applicants.empty()) {
         
-        cout << "There is no applicants to load!";
+        cout << "There is no applicants to load!\n";
         return 0;
         
     } else {
 
-        cout << "Number of applicants successfully loaded!";
+        cout << "Number of applicants successfully loaded!\n";
         
     }
 
