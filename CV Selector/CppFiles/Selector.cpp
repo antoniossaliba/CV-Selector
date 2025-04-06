@@ -105,7 +105,19 @@ void Selector::saveApplicants() const
 
 int Selector::getNumberOfApplicants() const
 {
+    if(applicants.empty()) {
+        
+        cout << "There is no applicants to load!";
+        return 0;
+        
+    } else {
+
+        cout << "Number of applicants successfully loaded!";
+        
+    }
+
     return applicants.size();
+    
 }
 
 void Selector::loadApplicants()
