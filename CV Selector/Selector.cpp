@@ -3,7 +3,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
-
+#include <sqlite3.h>
 #include "Selector.h"
 #include "Applicant.h"
 #include "Employee.h"
@@ -68,7 +68,7 @@ void Selector::removeApplicant(const string &email)
     cout << "Applicant with email " << email << " removed successfully.\n";
 }
 
-void Selector::modifyApplicant(const string &email, const Applicant &updatedApplicant)
+Applicant Selector::modifyApplicant(const string &email, const Applicant &updatedApplicant)
 {
     // Load the latest data from the file into the vector
     loadApplicants();
@@ -85,6 +85,7 @@ void Selector::modifyApplicant(const string &email, const Applicant &updatedAppl
             // Use the istream operator to get updated details immediately
             cout << "Enter updated details for the applicant:\n";
             cin >> applicant; // Calls the overloaded istream operator of the Applicant class
+            return applicant;
             break;
         }
     }
@@ -92,7 +93,7 @@ void Selector::modifyApplicant(const string &email, const Applicant &updatedAppl
     if (!found)
     {
         cout << "Applicant with email " << email << " not found.\n";
-        return;
+        return updatedApplicant;
     }
 
     // Write the updated vector back to the file
@@ -100,7 +101,7 @@ void Selector::modifyApplicant(const string &email, const Applicant &updatedAppl
     if (!file.is_open())
     {
         cout << "Error: Could not open file " << filename << " for writing.\n";
-        return;
+        return updatedApplicant;
     }
 
     for (const auto &applicant : applicants)
@@ -122,6 +123,8 @@ void Selector::modifyApplicant(const string &email, const Applicant &updatedAppl
     file.close();
 
     cout << "Applicant details updated successfully.\n";
+
+    return updatedApplicant; // Return the updated applicant object
 }
 
 string Selector::searchApplicant(const string &email)
@@ -153,8 +156,60 @@ string Selector::searchApplicant(const string &email)
     return "Applicant with email " + email + " not found.";
 }
 
-void Selector::displayApplicants() const
+void Selector::displayApplicants(sqlite3 *db, int exitCode, char* errorMessage) const
 {
+const char* selectSQL = "SELECT FirstName, LastName, Major, University, Email, Country, Phone, "
+                            "Age, YearOfGraduation, GPA, YearsOfExperience, SkillsCount, AcceptanceStatus "
+                            "FROM Applicants;";
+
+    sqlite3_stmt* stmt;
+    exitCode = sqlite3_prepare_v2(db, selectSQL, -1, &stmt, nullptr);
+    if (exitCode != SQLITE_OK) {
+        cerr << "Error preparing SQL statement: " << sqlite3_errmsg(db) << endl;
+        return;
+    }
+
+    cout << "Applicants Information:\n";
+    cout << "------------------------------------------\n";
+
+    // Execute the query and iterate through the results
+    while ((exitCode = sqlite3_step(stmt)) == SQLITE_ROW) {
+        string firstName = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        string lastName = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        string major = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        string university = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+        string email = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+        string country = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+        string phone = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+        int age = sqlite3_column_int(stmt, 7);
+        int yearOfGraduation = sqlite3_column_int(stmt, 8);
+        double gpa = sqlite3_column_double(stmt, 9);
+        int yearsOfExperience = sqlite3_column_int(stmt, 10);
+        int skillsCount = sqlite3_column_int(stmt, 11);
+        int acceptanceStatus = sqlite3_column_int(stmt, 12);
+
+        cout << "Name: " << firstName << " " << lastName << "\n"
+             << "Major: " << major << "\n"
+             << "University: " << university << "\n"
+             << "Email: " << email << "\n"
+             << "Phone: " << phone << "\n"
+             << "Country: " << country << "\n"
+             << "Age: " << age << "\n"
+             << "GPA: " << gpa << "\n"
+             << "Year of Graduation: " << yearOfGraduation << "\n"
+             << "Years of Experience: " << yearsOfExperience << "\n"
+             << "Skills Count: " << skillsCount << "\n"
+             << "Acceptance Status: " << ((acceptanceStatus != 0 && acceptanceStatus != 1)? (acceptanceStatus == 0 ? "Rejected" : "Accepted") : "Pending") << "\n"
+             << "------------------------------------------\n";
+    }
+
+    if (exitCode != SQLITE_DONE) {
+        cerr << "Error retrieving data: " << sqlite3_errmsg(db) << endl;
+    }
+
+    // Finalize the statement to release resources
+    sqlite3_finalize(stmt);
+
     ifstream file(filename);
     if (!file.is_open())
     {
@@ -296,4 +351,91 @@ void Selector::loadApplicants()
     }
 
     file.close();
+}
+
+void Selector::acceptRejectApplicants(sqlite3* db, int exitCode, char* errorMessage){
+    const char* selectSQL = "SELECT FirstName, LastName, Major, University, Email, Country, Phone, "
+                            "Age, YearOfGraduation, GPA, YearsOfExperience, SkillsCount, AcceptanceStatus "
+                            "FROM Applicants;";
+
+    sqlite3_stmt* stmt;
+    exitCode = sqlite3_prepare_v2(db, selectSQL, -1, &stmt, nullptr);
+    if (exitCode != SQLITE_OK) {
+        cerr << "Error preparing SQL statement: " << sqlite3_errmsg(db) << endl;
+        return;
+    }
+
+    cout << "Applicants Information:\n";
+    cout << "------------------------------------------\n";
+
+    // Execute the query and iterate through the results
+    while ((exitCode = sqlite3_step(stmt)) == SQLITE_ROW) {
+        string firstName = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+        string lastName = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        string major = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        string university = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+        string email = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+        string country = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+        string phone = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+        int age = sqlite3_column_int(stmt, 7);
+        int yearOfGraduation = sqlite3_column_int(stmt, 8);
+        double gpa = sqlite3_column_double(stmt, 9);
+        int yearsOfExperience = sqlite3_column_int(stmt, 10);
+        int skillsCount = sqlite3_column_int(stmt, 11);
+        const unsigned char* acceptanceStatus = sqlite3_column_text(stmt, 12);
+
+        cout << "Name: " << firstName << " " << lastName << "\n"
+             << "Major: " << major << "\n"
+             << "University: " << university << "\n"
+             << "Email: " << email << "\n"
+             << "Phone: " << phone << "\n"
+             << "Country: " << country << "\n"
+             << "Age: " << age << "\n"
+             << "GPA: " << gpa << "\n"
+             << "Year of Graduation: " << yearOfGraduation << "\n"
+             << "Years of Experience: " << yearsOfExperience << "\n"
+             << "Skills Count: " << skillsCount << "\n"
+             << "Acceptance Status: " << (acceptanceStatus ? (acceptanceStatus == 0 ? "Rejected" : "Acctepted") : "Pending") << "\n"
+             << "------------------------------------------\n";
+
+        string change = "";
+
+        cout<< "Do you want the acceptance status of "<< firstName << " "<< lastName<<" ? [y/n] ";
+        cin >> change;
+        while(change != "y" && change != "n"){
+            cout<< "Please enter a valid input [y/n] ";
+            cin>> change;
+        }
+        if(change == "y"){
+            cout<< "Please enter the acceptance status [Accepted/Rejected] ";
+            string status;
+            cin>> status;
+            string updateSQL = "UPDATE Applicants SET AcceptanceStatus = ? WHERE Email = '"+ email +"';";
+            sqlite3_stmt* updateStmt;
+            exitCode = sqlite3_prepare_v2(db, updateSQL.c_str(), -1, &updateStmt, nullptr);
+            if (exitCode != SQLITE_OK) {
+                cerr << "Error preparing SQL statement: " << sqlite3_errmsg(db) << endl;
+                continue;
+            }
+            sqlite3_bind_int(updateStmt, 1, (status == "Accepted" ? 1 : 0));
+            exitCode = sqlite3_step(updateStmt);
+            if (exitCode != SQLITE_DONE) {
+                cerr << "Error updating data: " << sqlite3_errmsg(db) << endl;
+            } else {
+                cout << "Acceptance status updated successfully for " << firstName << " " << lastName << ".\n";
+            }
+            sqlite3_finalize(updateStmt);
+        }
+        else if(change == "n"){
+            cout<< "No changes made to the acceptance status of "<< firstName << " "<< lastName<<".\n";
+        }
+    }
+
+    if (exitCode != SQLITE_DONE) {
+        cerr << "Error retrieving data: " << sqlite3_errmsg(db) << endl;
+    }
+
+    // Finalize the statement to release resources
+    sqlite3_finalize(stmt);
+
 }

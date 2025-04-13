@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <sqlite3.h>
 #include "Applicant.h"
 using namespace std;
 
@@ -16,9 +17,10 @@ public:
     Selector() {}
     void addApplicant(const Applicant &applicant);
     void removeApplicant(const string &email);
-    void modifyApplicant(const string &email, const Applicant &updatedApplicant);
+    Applicant modifyApplicant(const string &email, const Applicant &updatedApplicant);
     string searchApplicant(const string &email);
-    void displayApplicants() const;
+    void displayApplicants(sqlite3 *db, int exitCode, char* errorMessage) const;
+    void acceptRejectApplicants(sqlite3 *db, int exitCode, char* errorMessage);
     void saveApplicants() const;
     void loadApplicants();
     int getNumberOfApplicants() const;

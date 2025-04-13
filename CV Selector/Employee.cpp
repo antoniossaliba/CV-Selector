@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <limits>
+#include <sqlite3.h>
 #include "Applicant.h"
 #include "Selector.h"
 #include "Employee.h"
@@ -29,9 +30,10 @@ void Employee::removeApplicant(const string &email)
     selector.removeApplicant(email); // Fixed: Use email instead of name
 }
 
-void Employee::modifyApplicant(const string &email, const Applicant &updatedApplicant)
+Applicant Employee::modifyApplicant(const string &email, const Applicant &updatedApplicant)
 {
-    selector.modifyApplicant(email, updatedApplicant); // Fixed: Use email instead of name
+    Applicant a = selector.modifyApplicant(email, updatedApplicant); // Fixed: Use email instead of name
+    return a;
 }
 
 string Employee::searchApplicant(const string &name)
@@ -39,9 +41,14 @@ string Employee::searchApplicant(const string &name)
     return selector.searchApplicant(name);
 }
 
-void Employee::displayApplicants()
+void Employee::displayApplicants(sqlite3 *db, int exitCode, char* errorMessage)
 {
-    selector.displayApplicants();
+    selector.displayApplicants(db,exitCode,errorMessage);
+}
+
+void Employee::acceptRejectApplicants(sqlite3 *db, int exitCode, char* errorMessage)
+{
+    selector.acceptRejectApplicants(db, exitCode, errorMessage);
 }
 
 void Employee::saveApplicants()

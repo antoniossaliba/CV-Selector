@@ -15,94 +15,80 @@
 #include <ctime>
 #include <limits>
 #include <iomanip>
+#include <sqlite3.h>
 
 using namespace std;
 
-void displayMenu();
-void checkUser();
+void displayMenu(sqlite3 *db, int exitCode, char* errorMessage);
+void checkUser(sqlite3 *db, int exitCode, char* errorMessage);
 
 int main()
 {
+    sqlite3 *db; // Pointer to SQLite database
+    char* errorMessage = nullptr;
+
+    int exitCode = sqlite3_open("CVSelector.db", &db); // Open the database
+    if (exitCode != SQLITE_OK) // Check if the database opened successfully
+    {
+        cerr << "Error opening database: " << sqlite3_errmsg(db) << endl;
+        return exitCode;
+    }
+    cout << "Database opened successfully." << endl;
+
+        // Alter the table to add the AcceptanceStatus column if it doesn't exist
+    const char* alterTableSQL = "ALTER TABLE Applicants ADD COLUMN AcceptanceStatus BOOLEAN DEFAULT NULL;";
+    exitCode = sqlite3_exec(db, alterTableSQL, nullptr, nullptr, &errorMessage);
+    if (exitCode != SQLITE_OK) {
+        // Ignore the error if the column already exists
+        string errorMsg = errorMessage ? errorMessage : "";
+        if (errorMsg.find("duplicate column name") == string::npos) {
+            cerr << "Error altering table: " << errorMessage << endl;
+            sqlite3_free(errorMessage);
+            sqlite3_close(db);
+            return exitCode;
+        }
+        sqlite3_free(errorMessage);
+       } else {
+        cout << "Table altered successfully (if needed)." << endl;
+    }
+
+    const char* createTableSQLApplicants = 
+    "CREATE TABLE IF NOT EXISTS Applicants ("
+    "ID INTEGER PRIMARY KEY AUTOINCREMENT, "
+    "FirstName TEXT NOT NULL, "
+    "LastName TEXT NOT NULL, "
+    "Major TEXT NOT NULL, "
+    "University TEXT NOT NULL, "
+    "Email TEXT NOT NULL , "
+    "Country TEXT NOT NULL, "
+    "Phone TEXT NOT NULL, "
+    "Age INTEGER NOT NULL, "
+    "YearOfGraduation INTEGER NOT NULL, "
+    "GPA REAL NOT NULL, "
+    "YearsOfExperience INTEGER NOT NULL, "
+    "SkillsCount INTEGER NOT NULL, "
+    "AcceptanceStatus BOOLEAN DEFAULT NULL"
+    ");";
+
+    exitCode = sqlite3_exec(db, createTableSQLApplicants, nullptr, nullptr, &errorMessage);
+    if (exitCode != SQLITE_OK) {
+        cerr << "Error creating table: " << errorMessage << endl;
+        sqlite3_free(errorMessage);
+        sqlite3_close(db);
+        return exitCode;
+    } else {
+        cout << "Table created successfully!" << endl;
+    }
+
     cout << "Welcome to the Applicant Management System!\n";
     cout << "--------------------------------------------------\n";
-    checkUser();
+    checkUser(db, exitCode, errorMessage);
+
+    sqlite3_close(db); // Close the database connection
     return 0;
 }
 
-void displayMenu()
-{
-    Employee employee("admin", "password");
-    Selector selector;
-    Applicant applicant;
-
-    int choice;
-    do
-    {
-        cout << "1. Add Applicant\n";
-        cout << "2. Remove Applicant\n";
-        cout << "3. Modify Applicant\n";
-        cout << "4. Search Applicant\n";
-        cout << "5. Display Applicants\n";
-        cout << "6. Save Applicants\n";
-        cout << "7. Exit\n";
-        cout << "--------------------------------------------------\n";
-        cout << "Enter your choice: ";
-        cin >> choice;
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
-        cout << "--------------------------------------------------\n";
-        cout << endl;
-
-        switch (choice)
-        {
-        case 1:
-        {
-            cin >> applicant;
-            employee.addApplicant(applicant);
-            break;
-        }
-        case 2:
-        {
-            string emailToRemove;
-            cout << "Enter email of applicant to remove: ";
-            cin >> emailToRemove;
-            employee.removeApplicant(emailToRemove);
-            break;
-        }
-        case 3:
-        {
-            string emailToModify;
-            cout << "Enter email of applicant to modify: ";
-            cin >> emailToModify;
-            employee.modifyApplicant(emailToModify, applicant);
-            break;
-        }
-        case 4:
-        {
-            string emailToSearch;
-            cout << "Enter email of applicant to search: ";
-            cin >> emailToSearch;
-            if (employee.searchApplicant(emailToSearch) != "Applicant with email " + emailToSearch + " not found.")
-                cout << "Applicant found.\n";
-            else
-                cout << "Applicant not found.\n";
-            break;
-        }
-        case 5:
-            employee.displayApplicants();
-            break;
-        case 6:
-            employee.saveApplicants();
-            break;
-        case 7:
-            cout << "Exiting...\n";
-            break;
-        default:
-            cout << "Invalid choice. Please try again.\n";
-        }
-    } while (choice != 7);
-}
-
-void checkUser()
+void checkUser(sqlite3 *db, int exitCode, char* errorMessage)
 {
     int userType;
     do
@@ -143,7 +129,7 @@ void checkUser()
                     cout << "Login successful. You are an Employee.\n";
                     cout << endl;
                     cout << "-------------------------------------\n";
-                    displayMenu();
+                    displayMenu(db, exitCode, errorMessage); // Call the menu function for Employee
                     loginSuccessful = true;
                     break;
                 }
@@ -155,7 +141,7 @@ void checkUser()
 
             if (!loginSuccessful)
             {
-                cout << "Too many failed attempts. Proceeding to the menu.\n";
+                cout << "Too many failed attempts. Returning to the main menu.\n";
             }
             break;
         }
@@ -166,14 +152,49 @@ void checkUser()
             cin >> applicant; // Collect applicant details using the overloaded istream operator
             cout << "Thank you for providing your details.\n";
 
-            // Save the applicant's details to the file
-            ofstream file("applicants.txt", ios::app); // Open file in append mode
-            if (!file.is_open())
-            {
-                cout << "Error opening file for writing.\n";
+            // Prepare the SQL query for inserting data
+            const char* insertDataSQL = 
+                "INSERT INTO Applicants (FirstName, LastName, Major, University, Email, "
+                "Country, Phone, Age, YearOfGraduation, GPA, YearsOfExperience, SkillsCount, "
+                "AcceptanceStatus) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL);";
+
+            sqlite3_stmt* stmt;
+            exitCode = sqlite3_prepare_v2(db, insertDataSQL, -1, &stmt, nullptr);
+            if (exitCode != SQLITE_OK) {
+                cerr << "Error preparing SQL statement: " << sqlite3_errmsg(db) << endl;
+                return;
             }
-            else
-            {
+
+            // Bind the values from the Applicant object to the prepared statement
+            sqlite3_bind_text(stmt, 1, applicant.getFirstName().c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 2, applicant.getLastName().c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 3, applicant.getMajor().c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 4, applicant.getUniversity().c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 5, applicant.getEmail().c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 6, applicant.getCountry().c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_int(stmt, 7, std::stoi(applicant.getPhone()));
+            sqlite3_bind_int(stmt, 8, applicant.getAge());
+            sqlite3_bind_int(stmt, 9, applicant.getYearOfGraduation());
+            sqlite3_bind_double(stmt, 10, applicant.getGpa());
+            sqlite3_bind_int(stmt, 11, applicant.getYearsOfExperience());
+            sqlite3_bind_int(stmt, 12, applicant.getSkillsCount());
+
+            // Execute the prepared statement
+            exitCode = sqlite3_step(stmt);
+            if (exitCode != SQLITE_DONE) {
+                cerr << "Error inserting data: " << sqlite3_errmsg(db) << endl;
+            } else {
+                cout << "Applicant details inserted successfully into the database!" << endl;
+            }
+
+            // Finalize the statement to release resources
+            sqlite3_finalize(stmt);
+
+            // Optional: Save the applicant's details to a file
+            ofstream file("applicants.txt", ios::app); // Open file in append mode
+            if (!file.is_open()) {
+                cout << "Error opening file for writing.\n";
+            } else {
                 file << applicant.getFirstName() << ","
                      << applicant.getLastName() << ","
                      << applicant.getMajor() << ","
@@ -187,7 +208,7 @@ void checkUser()
                      << applicant.getYearsOfExperience() << ","
                      << applicant.getSkillsCount() << "\n";
                 file.close();
-                cout << "Your details have been saved successfully.\n";
+                cout << "Your details have been saved successfully to the file.\n";
             }
             cout << endl;
             break;
@@ -199,4 +220,147 @@ void checkUser()
             cout << "Invalid choice. Please try again.\n";
         }
     } while (userType != 3);
+}
+
+void displayMenu(sqlite3 *db, int exitCode, char* errorMessage)
+{
+    Employee employee("admin", "password");
+    Selector selector;
+    Applicant applicant;
+
+    int choice;
+    do
+    {
+        cout << "1. Add Applicant\n";
+        cout << "2. Remove Applicant\n";
+        cout << "3. Modify Applicant\n";
+        cout << "4. Search Applicant\n";
+        cout << "5. Display Applicants\n";
+        cout << "6. Save Applicants\n";
+        cout << "7. Accept/Reject Applicants\n";
+        cout << "8. Exit\n";
+        cout << "--------------------------------------------------\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "--------------------------------------------------\n";
+        cout << endl;
+
+        switch (choice)
+        {
+        case 1:
+        {
+            cin >> applicant;
+            employee.addApplicant(applicant);
+            break;
+        }
+        case 2:
+        {
+            string emailToRemove;
+            cout << "Enter email of applicant to remove: ";
+            cin >> emailToRemove;
+            employee.removeApplicant(emailToRemove);
+
+            const char* deleteSQL = "DELETE FROM Applicants WHERE Email = ?;";
+            sqlite3_stmt* stmt;
+        
+            // Prepare the SQL statement
+            exitCode = sqlite3_prepare_v2(db, deleteSQL, -1, &stmt, nullptr);
+            if (exitCode != SQLITE_OK) {
+                cerr << "Error preparing SQL statement: " << sqlite3_errmsg(db) << endl;
+                break;
+            }
+        
+            // Bind the email to the prepared statement
+            sqlite3_bind_text(stmt, 1, emailToRemove.c_str(), -1, SQLITE_STATIC);
+        
+            // Execute the prepared statement
+            exitCode = sqlite3_step(stmt);
+            if (exitCode == SQLITE_DONE) {
+                cout << "Applicant with email " << emailToRemove << " removed successfully from the database.\n";
+            } else {
+                cerr << "Error removing applicant: " << sqlite3_errmsg(db) << endl;
+            }
+        
+            // Finalize the statement to release resources
+            sqlite3_finalize(stmt);
+
+            break;
+        }
+        case 3:
+        {
+            string emailToModify;
+            cout << "Enter email of applicant to modify: ";
+            cin >> emailToModify;
+            Applicant a = employee.modifyApplicant(emailToModify, applicant);
+
+            // Prepare the SQL query for inserting data
+            const string insertDataSQL = 
+            "UPDATE Applicants SET "
+            "FirstName = ?, LastName = ?, Major = ?, University = ?, Email = ?, "
+            "Country = ?, Phone = ?, Age = ?, YearOfGraduation = ?, GPA = ?, "
+            "YearsOfExperience = ?, SkillsCount = ?, AcceptanceStatus = NULL "
+            "WHERE Email = '" + emailToModify + "';";
+
+            sqlite3_stmt* stmt;
+            exitCode = sqlite3_prepare_v2(db, insertDataSQL.c_str(), -1, &stmt, nullptr);
+            if (exitCode != SQLITE_OK) {
+            cerr << "Error preparing SQL statement: " << sqlite3_errmsg(db) << endl;
+            return;
+            }
+
+            // Bind the values from the Applicant object to the prepared statement
+            sqlite3_bind_text(stmt, 1, a.getFirstName().c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 2, a.getLastName().c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 3, a.getMajor().c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 4, a.getUniversity().c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 5, a.getEmail().c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 6, a.getCountry().c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_int(stmt, 7, std::stoi(a.getPhone()));
+            sqlite3_bind_int(stmt, 8, a.getAge());
+            sqlite3_bind_int(stmt, 9, a.getYearOfGraduation());
+            sqlite3_bind_double(stmt, 10, a.getGpa());
+            sqlite3_bind_int(stmt, 11, a.getYearsOfExperience());
+            sqlite3_bind_int(stmt, 12, a.getSkillsCount());
+
+            // Execute the prepared statement
+            exitCode = sqlite3_step(stmt);
+            if (exitCode != SQLITE_DONE) {
+            cerr << "Error inserting data: " << sqlite3_errmsg(db) << endl;
+            } else {
+            cout << "Applicant details inserted successfully into the database!" << endl;
+            }
+
+            // Finalize the statement to release resources
+            sqlite3_finalize(stmt);
+
+            break;
+        }
+        case 4:
+        {
+            string emailToSearch;
+            cout << "Enter email of applicant to search: ";
+            cin >> emailToSearch;
+            if (employee.searchApplicant(emailToSearch) != "Applicant with email " + emailToSearch + " not found.")
+                cout << "Applicant found.\n";
+            else
+                cout << "Applicant not found.\n";
+            break;
+        }
+        case 5:
+            employee.displayApplicants(db,exitCode,errorMessage);
+            break;
+        case 6:
+            employee.saveApplicants();
+            break;
+        case 7:
+            employee.acceptRejectApplicants(db, exitCode, errorMessage);
+            break;
+        case 8:
+            cout << "Exiting...\n";
+            break;
+        default:
+            cout << "Invalid choice. Please try again.\n";
+        }
+    } while (choice != 8);
 }

@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Users/Lenovo/OneDrive/Documents/libraries/mysql-connector-c++-9.2.0-winx64/include/jdbc;%(AdditionalIncludeDirectories)",
+                "C:/Users/Lenovo/OneDrive/Documents/libraries/mysql-connector-c++-9.2.0-winx64/lib64/vs14;%(AdditionalLibraryDirectories)",
+                "mysqlcppconn-static.lib;%(AdditionalDependencies)"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "STATIC_CONCPP"
+            ],
+            "windowsSdkVersion": "10.0.22621.0",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64"
+        }
+    ],
+    "version": 4
+}

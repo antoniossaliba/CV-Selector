@@ -9,7 +9,9 @@
 #include <ctime>
 #include <limits>
 #include "Applicant.h"
+
 using namespace std;
+
 
 Applicant::Applicant()
     : firstName(""), lastName(""), major(""), university(""), email(""), phone(""), country(""),
