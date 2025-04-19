@@ -1,6 +1,0 @@
-Elie,Hanna,Computer Engineering,USEK,elieH123@hotmail.com,USA,1728394056,19,2027,4,4,14
-Raja,Sakr,Chemical Engineering,AUB,rajasakr123456@gmail.com,Germany,123456789,21,2025,3.9,3,21
-Karim,Sakr,Computer Engineering,AUB,karimsakr0105@gmail.com,USA,1234567890,19,2027,3.2,2,12
-Elie,Hanna,Mechanical Mathematics,LAU,elieH132@email.com,USA,1234567891,19,2027,2.2,4,12
-Anotnios,Saliba,Electrical Engineering,USEK,antoSal158@mail.com,USA,1234567892,19,2027,3.4,9,2
-Elio,3eyle,Computer Engineering,LAu,karimsakr0105@gmail.com,USA,1234567894,19,2027,3.2,2,12

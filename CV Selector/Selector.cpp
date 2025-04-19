@@ -159,7 +159,7 @@ string Selector::searchApplicant(const string &email)
 void Selector::displayApplicants(sqlite3 *db, int exitCode, char* errorMessage) const
 {
 const char* selectSQL = "SELECT FirstName, LastName, Major, University, Email, Country, Phone, "
-                            "Age, YearOfGraduation, GPA, YearsOfExperience, SkillsCount, AcceptanceStatus "
+                            "Age, YearOfGraduation, GPA, YearsOfExperience, SkillsCount, Position, AcceptanceStatus "
                             "FROM Applicants;";
 
     sqlite3_stmt* stmt;
@@ -181,13 +181,15 @@ const char* selectSQL = "SELECT FirstName, LastName, Major, University, Email, C
         string email = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
         string country = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
         string phone = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+        string position = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 12));
         int age = sqlite3_column_int(stmt, 7);
         int yearOfGraduation = sqlite3_column_int(stmt, 8);
         double gpa = sqlite3_column_double(stmt, 9);
         int yearsOfExperience = sqlite3_column_int(stmt, 10);
         int skillsCount = sqlite3_column_int(stmt, 11);
-        int acceptanceStatus = sqlite3_column_int(stmt, 12);
-
+        const unsigned char* acceptanceStatusRaw = sqlite3_column_text(stmt, 13);
+        string acceptanceStatus = acceptanceStatusRaw ? reinterpret_cast<const char*>(acceptanceStatusRaw) : "Pending";
+        
         cout << "Name: " << firstName << " " << lastName << "\n"
              << "Major: " << major << "\n"
              << "University: " << university << "\n"
@@ -199,7 +201,9 @@ const char* selectSQL = "SELECT FirstName, LastName, Major, University, Email, C
              << "Year of Graduation: " << yearOfGraduation << "\n"
              << "Years of Experience: " << yearsOfExperience << "\n"
              << "Skills Count: " << skillsCount << "\n"
-             << "Acceptance Status: " << ((acceptanceStatus != 0 && acceptanceStatus != 1)? (acceptanceStatus == 0 ? "Rejected" : "Accepted") : "Pending") << "\n"
+             << "Position: " << position << "\n"
+             << "Acceptance Status: " 
+             << (acceptanceStatus == "1" ? "Accepted" : (acceptanceStatus == "0" ? "Rejected" : "Pending")) << "\n"
              << "------------------------------------------\n";
     }
 
@@ -210,59 +214,59 @@ const char* selectSQL = "SELECT FirstName, LastName, Major, University, Email, C
     // Finalize the statement to release resources
     sqlite3_finalize(stmt);
 
-    ifstream file(filename);
-    if (!file.is_open())
-    {
-        cout << "Error: Could not open file " << filename << " for reading.\n";
-        return;
-    }
+    // ifstream file(filename);
+    // if (!file.is_open())
+    // {
+    //     cout << "Error: Could not open file " << filename << " for reading.\n";
+    //     return;
+    // }
 
-    string line;
-    while (getline(file, line))
-    {
-        istringstream iss(line);
-        string firstName, lastName, major, university, email, phone, country;
-        int age, yearOfGraduation, yearsOfExperience, skillsCount;
-        double gpa;
+    // string line;
+    // while (getline(file, line))
+    // {
+    //     istringstream iss(line);
+    //     string firstName, lastName, major, university, email, phone, country;
+    //     int age, yearOfGraduation, yearsOfExperience, skillsCount;
+    //     double gpa;
 
-        if (getline(iss, firstName, ',') &&
-            getline(iss, lastName, ',') &&
-            getline(iss, major, ',') &&
-            getline(iss, university, ',') &&
-            getline(iss, email, ',') &&
-            getline(iss, country, ',') &&
-            getline(iss, phone, ',') &&
-            iss >> age &&
-            iss.ignore(1, ',') &&
-            iss >> yearOfGraduation &&
-            iss.ignore(1, ',') &&
-            iss >> gpa &&
-            iss.ignore(1, ',') &&
-            iss >> yearsOfExperience &&
-            iss.ignore(1, ',') &&
-            iss >> skillsCount)
-        {
+    //     if (getline(iss, firstName, ',') &&
+    //         getline(iss, lastName, ',') &&
+    //         getline(iss, major, ',') &&
+    //         getline(iss, university, ',') &&
+    //         getline(iss, email, ',') &&
+    //         getline(iss, country, ',') &&
+    //         getline(iss, phone, ',') &&
+    //         iss >> age &&
+    //         iss.ignore(1, ',') &&
+    //         iss >> yearOfGraduation &&
+    //         iss.ignore(1, ',') &&
+    //         iss >> gpa &&
+    //         iss.ignore(1, ',') &&
+    //         iss >> yearsOfExperience &&
+    //         iss.ignore(1, ',') &&
+    //         iss >> skillsCount)
+    //     {
 
-            cout << "Name: " << firstName << " " << lastName << "\n"
-                 << "Major: " << major << "\n"
-                 << "University: " << university << "\n"
-                 << "Email: " << email << "\n"
-                 << "Phone: " << phone << "\n"
-                 << "Country: " << country << "\n"
-                 << "Age: " << age << "\n"
-                 << "GPA: " << gpa << "\n"
-                 << "Year of Graduation: " << yearOfGraduation << "\n"
-                 << "Years of Experience: " << yearsOfExperience << "\n"
-                 << "Skills Count: " << skillsCount << "\n"
-                 << "------------------------------------------\n";
-        }
-        else
-        {
-            cerr << "Warning: Skipping invalid line in file: " << line << endl;
-        }
-    }
+    //         cout << "Name: " << firstName << " " << lastName << "\n"
+    //              << "Major: " << major << "\n"
+    //              << "University: " << university << "\n"
+    //              << "Email: " << email << "\n"
+    //              << "Phone: " << phone << "\n"
+    //              << "Country: " << country << "\n"
+    //              << "Age: " << age << "\n"
+    //              << "GPA: " << gpa << "\n"
+    //              << "Year of Graduation: " << yearOfGraduation << "\n"
+    //              << "Years of Experience: " << yearsOfExperience << "\n"
+    //              << "Skills Count: " << skillsCount << "\n"
+    //              << "------------------------------------------\n";
+    //     }
+    //     else
+    //     {
+    //         cerr << "Warning: Skipping invalid line in file: " << line << endl;
+    //     }
+    // }
 
-    file.close(); // Close the file
+    // file.close(); // Close the file
 }
 
 void Selector::saveApplicants() const
@@ -355,7 +359,7 @@ void Selector::loadApplicants()
 
 void Selector::acceptRejectApplicants(sqlite3* db, int exitCode, char* errorMessage){
     const char* selectSQL = "SELECT FirstName, LastName, Major, University, Email, Country, Phone, "
-                            "Age, YearOfGraduation, GPA, YearsOfExperience, SkillsCount, AcceptanceStatus "
+                            "Age, YearOfGraduation, GPA, YearsOfExperience, SkillsCount, Position, AcceptanceStatus "
                             "FROM Applicants;";
 
     sqlite3_stmt* stmt;
@@ -377,13 +381,15 @@ void Selector::acceptRejectApplicants(sqlite3* db, int exitCode, char* errorMess
         string email = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
         string country = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
         string phone = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+        string position = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 12));
         int age = sqlite3_column_int(stmt, 7);
         int yearOfGraduation = sqlite3_column_int(stmt, 8);
         double gpa = sqlite3_column_double(stmt, 9);
         int yearsOfExperience = sqlite3_column_int(stmt, 10);
         int skillsCount = sqlite3_column_int(stmt, 11);
-        const unsigned char* acceptanceStatus = sqlite3_column_text(stmt, 12);
-
+        const unsigned char* acceptanceStatusRaw = sqlite3_column_text(stmt, 13);
+        string acceptanceStatus = acceptanceStatusRaw ? reinterpret_cast<const char*>(acceptanceStatusRaw) : "Pending";
+        
         cout << "Name: " << firstName << " " << lastName << "\n"
              << "Major: " << major << "\n"
              << "University: " << university << "\n"
@@ -395,12 +401,14 @@ void Selector::acceptRejectApplicants(sqlite3* db, int exitCode, char* errorMess
              << "Year of Graduation: " << yearOfGraduation << "\n"
              << "Years of Experience: " << yearsOfExperience << "\n"
              << "Skills Count: " << skillsCount << "\n"
-             << "Acceptance Status: " << (acceptanceStatus ? (acceptanceStatus == 0 ? "Rejected" : "Acctepted") : "Pending") << "\n"
+             << "Position: " << position << "\n"
+             << "Acceptance Status: " 
+             << (acceptanceStatus == "1" ? "Accepted" : (acceptanceStatus == "0" ? "Rejected" : "Pending")) << "\n"
              << "------------------------------------------\n";
 
         string change = "";
 
-        cout<< "Do you want the acceptance status of "<< firstName << " "<< lastName<<" ? [y/n] ";
+        cout<< "Do you want to change the acceptance status of "<< firstName << " "<< lastName<<" ? [y/n] ";
         cin >> change;
         while(change != "y" && change != "n"){
             cout<< "Please enter a valid input [y/n] ";
