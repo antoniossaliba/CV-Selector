@@ -12,7 +12,6 @@
 
 using namespace std;
 
-
 Applicant::Applicant()
     : firstName(""), lastName(""), major(""), university(""), email(""), phone(""), country(""),
       age(0), gpa(0.0), yearOfGraduation(0), yearsOfExperience(0), skillsCount(0) {}
@@ -196,7 +195,7 @@ istream &operator>>(istream &in, Applicant &applicant)
         in >> applicant.skillsCount;
     }
 
-    in.ignore(numeric_limits<streamsize>::max(), '\n'); // Clear input buffer
+    in.ignore(numeric_limits<streamsize>::max(), '\n');
     return in;
 }
 

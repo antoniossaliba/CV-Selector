@@ -19,8 +19,8 @@ public:
     void removeApplicant(const string &email);
     Applicant modifyApplicant(const string &email, const Applicant &updatedApplicant);
     string searchApplicant(const string &email);
-    void displayApplicants(sqlite3 *db, int exitCode, char* errorMessage) const;
-    void acceptRejectApplicants(sqlite3 *db, int exitCode, char* errorMessage);
+    void displayApplicants(sqlite3 *db, int exitCode, char *errorMessage) const;
+    void acceptRejectApplicants(sqlite3 *db, int exitCode, char *errorMessage);
     void saveApplicants() const;
     void loadApplicants();
     int getNumberOfApplicants() const;
