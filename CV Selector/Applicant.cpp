@@ -77,11 +77,9 @@ istream &operator>>(istream &in, Applicant &applicant)
 
     cout << "Enter Major: ";
     getline(in, applicant.major);
-    while (applicant.major != "Computer Engineering" && applicant.major != "Electrical Engineering" &&
-           applicant.major != "Mechanical Mathematics" && applicant.major != "Chemical Engineering" &&
-           applicant.major != "Biomedical Engineering" && applicant.major != "Civil Engineering")
+    while (applicant.major.empty())
     {
-        cout << "Major must be one of the Engineering branches. Please enter again: ";
+        cout << "Major cannot be empty. Please enter again: ";
         getline(in, applicant.major);
     }
 
