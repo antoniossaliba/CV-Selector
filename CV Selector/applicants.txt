@@ -1,0 +1,9 @@
+Karim,Sakr,Computer Engineering,LAU,karimsakr0105@gmail.com,USA,1234567890,19,2027,3.2,2,2
+Karim,Sakr,Computer Engineering,LAU,karimsakr123@email.com,USA,1234567890,19,2027,3.2,2,2
+Karim,Sakr,Computer Engineering,LAU,karim123@email.com,USA,1234567890,19,2027,3.2,2,3
+Antonios,Saliba,Computer Engineering,LAU,antoS123@mail.com,USA,1234567890,19,2027,3.4,4,3
+Karim,Sakr,Computer Engineering,LAU,karimsakr0105@email.com,USA,1234561234,19,2027,3.7,4,2
+Christopher,Farah,Computer Engineering,USEK,chrisF123@emalo.com,USA,1029384756,23,2025,3,5,32
+Pietro,Ziade,Computer Engineering,BAU,zietro222@email.com,USA,0987654321,19,2029,2.2,3,2
+Karim,Sakr,Computer Engineering,LAU,karims123@emaail.com,USA,1234567890,19,2027,3.4,3,2
+Karim,Sakr,Computer Engineering,LAU,karim123@email.com,USA,1234567890,19,2027,3.4,5,3

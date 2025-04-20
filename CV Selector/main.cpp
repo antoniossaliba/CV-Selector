@@ -35,24 +35,9 @@ int main()
         cerr << "Error opening database: " << sqlite3_errmsg(db) << endl;
         return exitCode;
     }
-    cout << "Database opened successfully." << endl;
+    cout << "Database opened successfully." << endl; // database is created
 
-        // Alter the table to add the AcceptanceStatus column if it doesn't exist
-    // const char* alterTableSQL = "ALTER TABLE Applicants ADD COLUMN AcceptanceStatus BOOLEAN DEFAULT NULL;";
-    // exitCode = sqlite3_exec(db, alterTableSQL, nullptr, nullptr, &errorMessage);
-    // if (exitCode != SQLITE_OK) {
-    //     // Ignore the error if the column already exists
-    //     string errorMsg = errorMessage ? errorMessage : "";
-    //     if (errorMsg.find("duplicate column name") == string::npos) {
-    //         cerr << "Error altering table: " << errorMessage << endl;
-    //         sqlite3_free(errorMessage);
-    //         sqlite3_close(db);
-    //         return exitCode;
-    //     }
-    //     sqlite3_free(errorMessage);
-    //    } else {
-    //     cout << "Table altered successfully (if needed)." << endl;
-    // }
+    // Creating applicants table with their informations
 
     const char* createTableSQLApplicants = 
     "CREATE TABLE IF NOT EXISTS Applicants ("
@@ -82,6 +67,83 @@ int main()
     } else {
         cout << "Table created successfully!" << endl;
     }
+
+    // Creating a table for job positions counter
+
+    const char* createTableSQLJob = 
+    "CREATE TABLE IF NOT EXISTS Positions ("
+    "ID INTEGER PRIMARY KEY AUTOINCREMENT,"
+    "IT INTEGER DEFAULT 0,"
+    "HR INTEGER DEFAULT 0,"
+    "Finance INTEGER DEFAULT 0,"
+    "Marketing INTEGER DEFAULT 0,"
+    "Operations INTEGER DEFAULT 0"
+    ");";
+
+    exitCode = sqlite3_exec(db, createTableSQLJob, nullptr, nullptr, &errorMessage);
+    if (exitCode != SQLITE_OK) {
+        cerr << "Error creating table: " << errorMessage << endl;
+        sqlite3_free(errorMessage);
+        sqlite3_close(db);
+        return exitCode;
+    } else {
+        cout << "Positions table created successfully!" << endl;
+    }
+
+    const char* checkPositionsSQL = "SELECT COUNT(*) FROM Positions;";
+    sqlite3_stmt* stmt;
+    exitCode = sqlite3_prepare_v2(db, checkPositionsSQL, -1, &stmt, nullptr);
+    if (exitCode != SQLITE_OK) {
+        cerr << "Error preparing SQL statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return exitCode;
+    }
+
+    int count = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        count = sqlite3_column_int(stmt, 0);
+    }
+    sqlite3_finalize(stmt);
+
+    if (count == 0) {
+        const char* insertDefaultPositionsSQL = 
+        "INSERT INTO Positions (IT, HR, Finance, Marketing, Operations) VALUES (0, 0, 0, 0, 0);";
+        exitCode = sqlite3_exec(db, insertDefaultPositionsSQL, nullptr, nullptr, &errorMessage);
+        if (exitCode != SQLITE_OK) {
+            cerr << "Error initializing Positions table: " << errorMessage << endl;
+            sqlite3_free(errorMessage);
+            sqlite3_close(db);
+            return exitCode;
+        } else {
+            cout << "Positions table initialized successfully!" << endl;
+        }
+    }
+
+    const char* getCounterSQL = 
+    "SELECT IT, HR, Finance, Marketing, Operations FROM Positions;";
+
+    exitCode = sqlite3_prepare_v2(db, getCounterSQL, -1, &stmt, nullptr);
+    if (exitCode != SQLITE_OK) {
+        cerr << "Error preparing SQL statement: " << sqlite3_errmsg(db) << endl;
+        return 0;
+    }
+
+    int itCount = 0, hrCount = 0, financeCount = 0, marketingCount = 0, operationsCount = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        itCount = sqlite3_column_int(stmt, 0);
+        hrCount = sqlite3_column_int(stmt, 1);
+        financeCount = sqlite3_column_int(stmt, 2);
+        marketingCount = sqlite3_column_int(stmt, 3);
+        operationsCount = sqlite3_column_int(stmt, 4);
+    }
+
+    IT::counter = itCount;
+    HR::counter = hrCount;
+    Finance::counter = financeCount;
+    Marketing::counter = marketingCount;
+    Operations::counter = operationsCount;
+
+    sqlite3_finalize(stmt);
 
     cout << "Welcome to the Applicant Management System!\n";
     cout << "--------------------------------------------------\n";
@@ -155,30 +217,48 @@ void checkUser(sqlite3 *db, int exitCode, char* errorMessage)
             int position = Job::selectPosition();
             cout << "-------------------------------------\n";
 
+
+            const char* updatePositionSQL;
+            
+
+
             Job* job;
 
             switch(position){
                 case 1:
                     job = new IT();
+                    updatePositionSQL = "UPDATE Positions SET IT = IT + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
                 case 2:
                     job = new HR();
+                    updatePositionSQL = "UPDATE Positions SET HR = HR + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
                 case 3:
                     job = new Finance();
+                    updatePositionSQL = "UPDATE Positions SET Finance = Finance + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
                 case 4:
                     job = new Marketing();
+                    updatePositionSQL = "UPDATE Positions SET Marketing = Marketing + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
                 case 5:
                     job = new Operations();
+                    updatePositionSQL = "UPDATE Positions SET Operations = Operations + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
             }
+
+            exitCode = sqlite3_exec(db, updatePositionSQL, nullptr, nullptr, &errorMessage);
+            if (exitCode != SQLITE_OK) {
+                cerr << "Error updating Positions table: " << errorMessage << endl;
+                sqlite3_free(errorMessage);
+            } else {
+                cout << "Position counter updated successfully!" << endl;
+        }
 
             
 
@@ -206,7 +286,7 @@ void checkUser(sqlite3 *db, int exitCode, char* errorMessage)
             sqlite3_bind_text(stmt, 4, applicant.getUniversity().c_str(), -1, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 5, applicant.getEmail().c_str(), -1, SQLITE_STATIC);
             sqlite3_bind_text(stmt, 6, applicant.getCountry().c_str(), -1, SQLITE_STATIC);
-            sqlite3_bind_int(stmt, 7, std::stoi(applicant.getPhone()));
+            sqlite3_bind_text(stmt, 7, applicant.getPhone().c_str(), -1, SQLITE_STATIC);
             sqlite3_bind_int(stmt, 8, applicant.getAge());
             sqlite3_bind_int(stmt, 9, applicant.getYearOfGraduation());
             sqlite3_bind_double(stmt, 10, applicant.getGpa());
@@ -263,6 +343,9 @@ void displayMenu(sqlite3 *db, int exitCode, char* errorMessage)
     Selector selector;
     Applicant applicant;
 
+    cout<< "Welcome to the Employee Menu!\n";
+    cout << "--------------------------------------------------\n";
+
     int choice;
     do
     {
@@ -273,7 +356,8 @@ void displayMenu(sqlite3 *db, int exitCode, char* errorMessage)
         cout << "5. Display Applicants\n";
         cout << "6. Save Applicants\n";
         cout << "7. Accept/Reject Applicants\n";
-        cout << "8. Exit\n";
+        cout << "8. Show Positions\n";
+        cout << "9. Exit\n";
         cout << "--------------------------------------------------\n";
         cout << "Enter your choice: ";
         cin >> choice;
@@ -288,30 +372,42 @@ void displayMenu(sqlite3 *db, int exitCode, char* errorMessage)
 
             int position = Job::selectPosition();
             cout << "-------------------------------------\n";
-
+            const char* updatePositionSQL;
             Job* job;
 
             switch(position){
                 case 1:
                     job = new IT();
+                    updatePositionSQL = "UPDATE Positions SET IT = IT + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
                 case 2:
                     job = new HR();
+                    updatePositionSQL = "UPDATE Positions SET HR = HR + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
                 case 3:
                     job = new Finance();
+                    updatePositionSQL = "UPDATE Positions SET Finance = Finance + 1 WHERE ID = 1;"; 
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
                 case 4:
                     job = new Marketing();
+                    updatePositionSQL = "UPDATE Positions SET Marketing = Marketing + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
                 case 5:
                     job = new Operations();
+                    updatePositionSQL = "UPDATE Positions SET Operations = Operations + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
+            }
+            exitCode = sqlite3_exec(db, updatePositionSQL, nullptr, nullptr, &errorMessage);
+            if (exitCode != SQLITE_OK) {
+                cerr << "Error updating Positions table: " << errorMessage << endl;
+                sqlite3_free(errorMessage);
+            } else {
+                cout << "Position counter updated successfully!" << endl;
             }
 
             cin >> applicant;
@@ -364,11 +460,34 @@ void displayMenu(sqlite3 *db, int exitCode, char* errorMessage)
             cin >> emailToRemove;
             employee.removeApplicant(emailToRemove);
 
-            const char* deleteSQL = "DELETE FROM Applicants WHERE Email = ?;";
+            // getting the position of the applicant to remove before removing
+
+            const char* selectPositionSQL = "SELECT Position FROM Applicants WHERE Email = ?;";
             sqlite3_stmt* stmt;
-        
+            exitCode = sqlite3_prepare_v2(db, selectPositionSQL, -1, &stmt, nullptr);
+            if (exitCode != SQLITE_OK) {
+                cerr << "Error preparing SQL statement: " << sqlite3_errmsg(db) << endl;
+                break;
+            }
+
+            sqlite3_bind_text(stmt, 1, emailToRemove.c_str(), -1, SQLITE_STATIC);
+
+            string position;
+            if (sqlite3_step(stmt) == SQLITE_ROW) {
+                position = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            } else {
+                cerr << "Error: Applicant with email " << emailToRemove << " not found in the database.\n";
+                sqlite3_finalize(stmt);
+                break;
+            }
+            sqlite3_finalize(stmt);
+
+            // removing the applicant from the table Applicants
+
+            const char* deleteAppSQL = "DELETE FROM Applicants WHERE Email = ?;";
+            
             // Prepare the SQL statement
-            exitCode = sqlite3_prepare_v2(db, deleteSQL, -1, &stmt, nullptr);
+            exitCode = sqlite3_prepare_v2(db, deleteAppSQL, -1, &stmt, nullptr);
             if (exitCode != SQLITE_OK) {
                 cerr << "Error preparing SQL statement: " << sqlite3_errmsg(db) << endl;
                 break;
@@ -380,13 +499,40 @@ void displayMenu(sqlite3 *db, int exitCode, char* errorMessage)
             // Execute the prepared statement
             exitCode = sqlite3_step(stmt);
             if (exitCode == SQLITE_DONE) {
-                cout << "Applicant with email " << emailToRemove << " removed successfully from the database.\n";
+                cout << "\n";
             } else {
                 cerr << "Error removing applicant: " << sqlite3_errmsg(db) << endl;
             }
         
             // Finalize the statement to release resources
             sqlite3_finalize(stmt);
+
+            const char* updatePositionSQL;
+            if (position == "IT") {
+                updatePositionSQL = "UPDATE Positions SET IT = IT - 1 WHERE ID = 1;";
+                IT::counter--;
+            } else if (position == "HR") {
+                updatePositionSQL = "UPDATE Positions SET HR = HR - 1 WHERE ID = 1;";
+                HR::counter--;
+            } else if (position == "Finance") {
+                updatePositionSQL = "UPDATE Positions SET Finance = Finance - 1 WHERE ID = 1;";
+                Finance::counter--;
+            } else if (position == "Marketing") {
+                updatePositionSQL = "UPDATE Positions SET Marketing = Marketing - 1 WHERE ID = 1;";
+                Marketing::counter--; 
+            } else if (position == "Operations") {
+                updatePositionSQL = "UPDATE Positions SET Operations = Operations - 1 WHERE ID = 1;";
+                Operations::counter--;
+            }
+
+            exitCode = sqlite3_exec(db, updatePositionSQL, nullptr, nullptr, &errorMessage);
+            if (exitCode != SQLITE_OK) {
+                cerr << "Error updating Positions table: " << errorMessage << endl;
+                sqlite3_free(errorMessage);
+            }
+
+            cout << "Applicant with email "<< emailToRemove << "removed successfully!\n";
+
 
             break;
         }
@@ -395,36 +541,96 @@ void displayMenu(sqlite3 *db, int exitCode, char* errorMessage)
             string emailToModify;
             cout << "Enter email of applicant to modify: ";
             cin >> emailToModify;
+
+            // getting the old position before change
+            const char* selectPositionSQL = "SELECT Position FROM Applicants WHERE Email = ?;";
+            sqlite3_stmt* stmt;
+            exitCode = sqlite3_prepare_v2(db, selectPositionSQL, -1, &stmt, nullptr);
+            if (exitCode != SQLITE_OK) {
+                cerr << "Error preparing SQL statement: " << sqlite3_errmsg(db) << endl;
+                break;
+            }
+
+            sqlite3_bind_text(stmt, 1, emailToModify.c_str(), -1, SQLITE_STATIC);
+
+            string Oldposition;
+            if (sqlite3_step(stmt) == SQLITE_ROW) {
+                Oldposition = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            } else {
+                cerr << "Error: Applicant with email " << emailToModify << " not found in the database.\n";
+                sqlite3_finalize(stmt);
+                break;
+            }
+            sqlite3_finalize(stmt);
+
+            // updating position counter in the classes and in the database
+            const char* updatePositionSQL;
+            if(Oldposition == "IT"){
+                updatePositionSQL = "UPDATE Positions SET IT = IT - 1 WHERE ID = 1;";
+                IT::counter--;
+            }else if(Oldposition == "HR"){
+                updatePositionSQL = "UPDATE Positions SET HR = HR - 1 WHERE ID = 1;";
+                HR::counter--;
+            }else if(Oldposition == "Finance"){
+                updatePositionSQL = "UPDATE Positions SET Finance = Finance - 1 WHERE ID = 1;";
+                Finance::counter--;
+            }else if(Oldposition == "Marketing"){
+                updatePositionSQL = "UPDATE Positions SET Marketing = Marketing - 1 WHERE ID = 1;";
+                Marketing::counter--;
+            }else if(Oldposition == "Operations"){
+                updatePositionSQL = "UPDATE Positions SET Operations = Operations - 1 WHERE ID = 1;";
+                Operations::counter--;
+            }
+            exitCode = sqlite3_exec(db, updatePositionSQL, nullptr, nullptr, &errorMessage);
+            if (exitCode != SQLITE_OK) {
+                cerr << "Error updating Positions table: " << errorMessage << endl;
+                sqlite3_free(errorMessage);
+            }
+
+
+            // modifying the applicant
             Applicant a = employee.modifyApplicant(emailToModify, applicant);
 
+            // updating the new position with its counter
             cout<<"Enter the updated position [1-5]: ";
             int position = Job::selectPosition();
             Job* job;
 
+            const char* updateNewPositionSQL;
             switch(position){
                 case 1:
                     job = new IT();
+                    updateNewPositionSQL = "UPDATE Positions SET IT = IT + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
                 case 2:
                     job = new HR();
+                    updateNewPositionSQL = "UPDATE Positions SET HR = HR + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
                 case 3:
                     job = new Finance();
+                    updateNewPositionSQL = "UPDATE Positions SET Finance = Finance + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
                 case 4:
                     job = new Marketing();
+                    updateNewPositionSQL = "UPDATE Positions SET Marketing = Marketing + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
                 case 5:
                     job = new Operations();
+                    updateNewPositionSQL = "UPDATE Positions SET Operations = Operations + 1 WHERE ID = 1;";
                     cout << "You have selected " << job->getName() << ".\n";
                     break;
             }
+            exitCode = sqlite3_exec(db, updateNewPositionSQL, nullptr, nullptr, &errorMessage);
+            if (exitCode != SQLITE_OK) {
+                cerr << "Error updating Positions table: " << errorMessage << endl;
+                sqlite3_free(errorMessage);
+            }
 
-            // Prepare the SQL query for inserting data
+            // Updating all the other info of the applicant and Prepare the SQL query for inserting data
             const string insertDataSQL = 
             "UPDATE Applicants SET "
             "FirstName = ?, LastName = ?, Major = ?, University = ?, Email = ?, "
@@ -432,7 +638,6 @@ void displayMenu(sqlite3 *db, int exitCode, char* errorMessage)
             "YearsOfExperience = ?, SkillsCount = ?, Position = ?, AcceptanceStatus = NULL "
             "WHERE Email = '" + emailToModify + "';";
 
-            sqlite3_stmt* stmt;
             exitCode = sqlite3_prepare_v2(db, insertDataSQL.c_str(), -1, &stmt, nullptr);
             if (exitCode != SQLITE_OK) {
             cerr << "Error preparing SQL statement: " << sqlite3_errmsg(db) << endl;
@@ -487,11 +692,22 @@ void displayMenu(sqlite3 *db, int exitCode, char* errorMessage)
         case 7:
             employee.acceptRejectApplicants(db, exitCode, errorMessage);
             break;
+
         case 8:
+            cout << "Positions:\n";
+            cout << "IT: " << IT::counter << "\n";
+            cout << "HR: " << HR::counter << "\n";
+            cout << "Finance: " << Finance::counter << "\n";
+            cout << "Marketing: " << Marketing::counter << "\n";
+            cout << "Operations: " << Operations::counter << "\n";
+            cout << "Total Applicants: " << IT::counter + HR::counter + Finance::counter + Marketing::counter + Operations::counter << "\n";
+            cout << "--------------------------------------------------\n \n";
+            break;
+        case 9:
             cout << "Exiting...\n";
             break;
         default:
             cout << "Invalid choice. Please try again.\n";
         }
-    } while (choice != 8);
+    } while (choice != 9);
 }
