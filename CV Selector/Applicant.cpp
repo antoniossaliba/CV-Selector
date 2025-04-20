@@ -154,7 +154,7 @@ istream &operator>>(istream &in, Applicant &applicant)
 
     cout << "Enter Age: ";
     in >> applicant.age;
-    while (applicant.age <= 18 || applicant.age >= 80)
+    while (applicant.age < 18 || applicant.age > 64)
     {
         cout << "Age must be valid. Please enter again: ";
         in >> applicant.age;
