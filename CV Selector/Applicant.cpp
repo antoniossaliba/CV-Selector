@@ -59,6 +59,7 @@ void Applicant::setSkillsCount(int count) { this->skillsCount = count; }
 
 istream &operator>>(istream &in, Applicant &applicant)
 {
+    in.ignore(numeric_limits<streamsize>::max(), '\n');
     cout << "Enter First Name: ";
     getline(in, applicant.firstName);
     while (applicant.firstName.empty())
